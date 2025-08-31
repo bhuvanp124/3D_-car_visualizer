@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D Car Customization Platform</title>
+
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+    }
+
+    .controls {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 10;
+      max-width: 250px;
+    }
+
+    .controls label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    .controls select,
+    .controls input {
+      width: 100%;
+      padding: 5px;
+      margin-top: 5px;
+    }
+
+    .controls button {
+      margin-top: 10px;
+      padding: 8px;
+      width: 100%;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Viewer -->
+  <model-viewer id="carViewer"
+    src="ferrari.glb"
+    alt="A 3D model of a Ferrari"
+    auto-rotate
+    camera-controls
+    ar
+    ar-modes="scene-viewer webxr quick-look"
+    shadow-intensity="1"
+    exposure="1"
+    environment-image="neutral"
+  ></model-viewer>
+
+  <!-- Controls -->
+  <div class="controls">
+    <label for="colorPicker">Car Color:</label>
+    <input type="color" id="colorPicker" value="#ff0000"/>
+
+    <label for="materialType">Material Type:</label>
+    <select id="materialType">
+      <option value="matte">Matte</option>
+      <option value="glossy">Glossy</option>
+      <option value="metallic">Metallic</option>
+    </select>
+
+    <label for="lighting">Lighting Scene:</label>
+    <select id="lighting">
+      <option value="neutral">Neutral</option>
+      <option value="sunset">Sunset</option>
+      <option value="city">City</option>
+    </select>
+
+    <label for="accessory">Car Model:</label>
+    <select id="accessory">
+      <option value="ferrari.glb">Standard</option>
+      <option value="ferrari-spoiler.glb">With Spoiler</option>
+      <option value="ferrari-open.glb">Convertible</option>
+    </select>
+
+    <label for="wheels">Wheel Style:</label>
+    <select id="wheels">
+      <option value="standard">Standard</option>
+      <option value="racing">Racing</option>
+      <option value="offroad">Off-road</option>
+    </select>
+
+    <label>
+      <input type="checkbox" id="tintToggle" />
+      Tinted Windows
+    </label>
+
+    <button onclick="toggleView()">Toggle Interior View</button>
+    <button onclick="enterVR()">Enter VR Mode</button>
+  </div>
+
+  <!-- Script -->
+  <script>
+    const viewer = document.getElementById('carViewer');
+    const colorPicker = document.getElementById('colorPicker');
+    const lightingSelect = document.getElementById('lighting');
+    const accessorySelect = document.getElementById('accessory');
+    const materialSelect = document.getElementById('materialType');
+    const tintToggle = document.getElementById('tintToggle');
+    const wheelsSelect = document.getElementById('wheels');
+
+    let interiorView = false;
+
+    // Color Picker
+    colorPicker.addEventListener('input', () => {
+      const hex = colorPicker.value;
+      applyCarMaterial(hex, materialSelect.value);
+    });
+
+    // Lighting Scene
+    lightingSelect.addEventListener('change', () => {
+      viewer.environmentImage = lightingSelect.value;
+    });
+
+    // Model Variant
+    accessorySelect.addEventListener('change', () => {
+      viewer.src = accessorySelect.value;
+    });
+
+    // Material Type
+    materialSelect.addEventListener('change', () => {
+      applyCarMaterial(colorPicker.value, materialSelect.value);
+    });
+
+    // Tinted Windows
+    tintToggle.addEventListener('change', () => {
+      viewer.model?.materials?.forEach(mat => {
+        if (mat.name.toLowerCase().includes("glass")) {
+          mat.setAlphaMode(tintToggle.checked ? "OPAQUE" : "BLEND");
+          mat.pbrMetallicRoughness.setBaseColorFactor(
+            tintToggle.checked ? [0, 0, 0, 1] : [0.5, 0.5, 0.5, 0.4]
+          );
+        }
+      });
+    });
+
+    // Wheel Style (Placeholder)
+    wheelsSelect.addEventListener('change', () => {
+      alert("Wheel style switched to: " + wheelsSelect.value + " (Simulation)");
+      // Swap wheels logic can be implemented via submeshes or separate models
+    });
+
+    // Toggle View (Interior / Exterior)
+    function toggleView() {
+      if (interiorView) {
+        viewer.cameraOrbit = "0deg 75deg 3m";
+      } else {
+        viewer.cameraOrbit = "0deg 0deg 1m";
+      }
+      interiorView = !interiorView;
+    }
+
+    // Enter VR
+    function enterVR() {
+      viewer.enterVR();
+    }
+
+    // Helper: Apply car material properties
+    function applyCarMaterial(hexColor, type) {
+      const rgb = [
+        parseInt(hexColor.substr(1, 2), 16) / 255,
+        parseInt(hexColor.substr(3, 2), 16) / 255,
+        parseInt(hexColor.substr(5, 2), 16) / 255,
+        1
+      ];
+
+      viewer.model?.materials?.forEach(mat => {
+        if (!mat.name.toLowerCase().includes("glass")) {
+          mat.pbrMetallicRoughness.setBaseColorFactor(rgb);
+          if (type === "matte") {
+            mat.pbrMetallicRoughness.setRoughnessFactor(1);
+            mat.pbrMetallicRoughness.setMetallicFactor(0.1);
+          } else if (type === "glossy") {
+            mat.pbrMetallicRoughness.setRoughnessFactor(0.2);
+            mat.pbrMetallicRoughness.setMetallicFactor(0.5);
+          } else if (type === "metallic") {
+            mat.pbrMetallicRoughness.setRoughnessFactor(0.3);
+            mat.pbrMetallicRoughness.setMetallicFactor(1);
+          }
+        }
+      });
+    }
+
+    // 🔴 Hide the bottom circle/platform after model loads
+    viewer.addEventListener("load", () => {
+      const scene = viewer.model?.scene;
+      if (scene) {
+        scene.traverse(node => {
+          const name = node.name.toLowerCase();
+          if (name.includes("circle") || name.includes("base") || name.includes("platform")) {
+            node.visible = false;
+            console.log("Removed bottom mesh:", node.name);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
